@@ -370,6 +370,34 @@ On a replica:
 
 - Thus `a.deps ⊂ b.deps` then `a < b` does not hold.
 
+TODO:
+x ~ c, c ~ b,
+x ≁ b
+
+In this case after La forward x to R1, 
+x.deps = 0, 0, c
+c.deps = 0, b, 0
+
+x is after c but x.deps ≯ c.deps
+
+```
+x          b←c
+0 0 0    0 0 0
+-----    -----
+Lx       R1
+         x¹ 
+            ↘
+x          b←c
+0 0 0    0 0 0
+-----    -----
+Lx       R1
+```
+
+Thus x¹ need to include all c.deps 
+TODO what if a dep on another replica has more deps?
+
+TODO deal with final_deps when fast-accept.
+
 ### Implementation
 
 `a.deps[i]` stores only the max instance id in it,
@@ -680,6 +708,7 @@ If `a` is initiated after `b` became safe,
 Then `b` will be added into `a.deps`.
 
 Thus `a.deps ⊃ b.deps`
+<!-- TODO: need to check final_deps instead of dep -->
 
 ∴ execute `a` after `b` will never break guarantees.
 
@@ -843,6 +872,9 @@ Prepare on `x`.
 
 If `P` saw a Accepted `x`,
 run classic paxos and commit `x`.
+
+Get the value of `x` that is accepted with the latest ballot,
+or the value of committed `x`:
 
 - If `P` saw a committed `x`:
 
