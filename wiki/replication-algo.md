@@ -605,16 +605,44 @@ Just commit.
   - `last_ballot` is the ballot number before processing the request.
   - `instance_id`.
 
+TODO
+Changes:
+
+`initial_deps` is useless and removed:
+recovery does not need `initial_deps`. only `deps`.
+
+`deps_committed` is useless in fast-accept:
+Without `deps_committed` no fast-commit will be delayed.
+
+To fast-commit `a > x`:
+If `x` is slow-committed, an Accept status `x` will be seen.
+Thus `a` can be fast-committed.
+
+If `x` is fast-committed:
+
+- If `a` reached `Lx`, then `a` know if `x` is committed, because `Lx` is the
+    first to commit.
+    Although there is chance `x` is committed after `a` reaches `Lx`,
+    `Lx` broadcasts `x is committed` very likely earlier than another instance
+    brings `x is committed` through its fast-accept request.
+
+- If `a` did not reach `Lx`, then `a` must have reached `g - {La, Lx}`,
+  this prevent other value of `a > y` to commit.
+  ∴ `a > x` is safe to fast commit.
+
 ## FastAccept request
 
 - `cmds`: the commands to run.
 - `initial_deps`: the deps when leader initiate the instance.
-- `deps_committed`: a vector of committed flag of every instance in `initial_deps`
 
 ## FastAccept reply
 
 - `deps`: udpated deps by a replica.
 - `deps_committed`: a vector of committed flag of every instance in `deps`
+    TODO: to fast-commit `a > x`, `x is accepted` is also an acceptable
+    condition.
+    use another field to describe status of `x`.
+    maybe `x.ballot`.
 
 ## Accept request
 
