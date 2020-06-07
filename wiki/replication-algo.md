@@ -104,7 +104,7 @@ type Dep(InstanceID, bool)
 
 type Instance {
 
-    initialDeps:   Vec<Dep>;
+    initial_deps:   Vec<Dep>;
     deps:          Vec<Dep>;
     final_deps:    Vec<Dep>;
     committed:     bool;
@@ -117,8 +117,8 @@ type Instance {
 
 An instance has 4 attributes for `deps`:
 
-- `a.initialDeps`: is instance id set when `a` is created on leader.
-- `a.deps`: when `a` is created it is same as `a.initialDeps`.
+- `a.initial_deps`: is instance id set when `a` is created on leader.
+- `a.deps`: when `a` is created it is same as `a.initial_deps`.
   when `a` is forwarded to other replica through FastAccept,
   it is updated instnce id set.
 
@@ -190,7 +190,7 @@ From definition, we infer that:
   > committed flag are ignored in this pseudo code for clarity
 
   ```
-  a.deps  = a.initialDeps = all_instances_on_this_repilca
+  a.deps  = a.initial_deps = all_instances_on_this_repilca
   ```
 
 - When a replica receives FastAccept of `a`,
@@ -347,8 +347,8 @@ On a replica,
 
 An instance has 4 attributes for `deps`:
 
-- `a.initialDeps`: is instance id set when `a` is created on leader.
-- `a.deps`: when `a` is created it is same as `a.initialDeps`.
+- `a.initial_deps`: is instance id set when `a` is created on leader.
+- `a.deps`: when `a` is created it is same as `a.initial_deps`.
   when `a` is forwarded to other replica, it is updated instnce id set.
 
 - `a.final_deps` is `deps` updated by Accept or Commit.
@@ -508,7 +508,7 @@ Leader:
        Lx = leaderOf(x)
        a.deps[Lx] = max(x, a.deps[Lx])
 
-   a.initialDeps = a.deps
+   a.initial_deps = a.deps
    ```
 
 2. FastAccept: forward `a` to other replicas.
@@ -911,7 +911,7 @@ Otherwise continue try checking `a.deps[1] == y`.
 
 Continue checking if `a.deps[1] == y` can be committed on fast-path, and so on.
 If no value of `a.deps[1]` could have been committed, use the initial value:
-`a.initialDeps[1]`.
+`a.initial_deps[1]`.
 
 ### Case-2: `R1` is unreachable, only one possibly committed value of `a.deps[1]`.
 
