@@ -49,7 +49,7 @@
     - [Case-1: R1 is unreachable, there could be two possibly committed value of a.deps[1].](#case-1-r1-is-unreachable-there-could-be-two-possibly-committed-value-of-adeps1)
       - [Lemma-1: R1 does not have a &lt; x on it](#lemma-1-r1-does-not-have-a--x-on-it)
       - [Lemma-2: R0 does not have a &gt; x on it.](#lemma-2-r0-does-not-have-a--x-on-it)
-      - [Lemma-3: x could only have been committed on fast path with x &gt; a:](#lemma-3-x-could-only-have-been-committed-on-fast-path-with-x--a)
+      - [Lemma-x-fast-gt-a: x could only have been committed on fast path with x &gt; a:](#lemma-3-x-could-only-have-been-committed-on-fast-path-with-x--a)
       - [slow-committed value of x](#slow-committed-value-of-x)
     - [Case-2: R1 is unreachable, only one possibly committed value of a.deps[1].](#case-2-r1-is-unreachable-only-one-possibly-committed-value-of-adeps1)
     - [Case-3: R1 is reached.](#case-3-r1-is-reached)
@@ -740,6 +740,10 @@ Assumes:
 - The leader of `a` `La` is `R0`
 - The recovery process is `P`(`P != R0`).
 
+### Lemma-safe
+
+A value is safe if no other value could constitute a quorum.
+
 ## Cases not need to recover:
 
 After Preparing on a quorum(`F+1`):
@@ -854,7 +858,9 @@ If `a.deps[1] == x` is committed,
 by [fast-commit requirements](#fast-commit-requirements),
 the committed `x.deps` must not contain `a`(`x < a`)
 
-#### Lemma-3: `x` could only have been committed on fast path with `x > a`:
+#### Lemma-x-fast-gt-a
+
+`x` could only have been committed on fast path with `x > a`:
 
 ∵ `Nx = ⌊(F+1)/2⌋`.
 
@@ -868,15 +874,18 @@ the committed `x.deps` must not contain `a`(`x < a`)
 
 #### slow-committed value of `x`
 
-Prepare on `x`.
-
-If `P` saw a Accepted `x`,
-run classic paxos and commit `x`.
+After Prepare on `x`.
 
 Get the value of `x` that is accepted with the latest ballot,
 or the value of committed `x`:
 
-- If `P` saw a committed `x`:
+Choose `a.deps[1] == x` if: the value of x is NOT nil and `x < a`.
+Otherwise continue try checking `a.deps[1] == y`.
+
+
+##### Proof
+
+- If the value is NOT nil, `x` could have been committed on slow-path.
 
   - If `x > a`, From FP-condition,
     `a.deps[1] == x` could not have been committed on fast-path.
@@ -890,12 +899,15 @@ or the value of committed `x`:
 
     ∴ `a.deps[1] == x` is the only possible value to commit.
 
-- Otherwise, `x` is not committed on slow-path.
+- If the value is nil, `x` is not committed on slow-path.
 
-  From Lemma-3:
-  `a.deps[1] == x` can not be committed on fast-path.
+  Assumes `x` is committed on fast-path:
 
-  Discard `a.deps[1] == x`, try other value of `a.deps[1]`.
+  From Lemma-x-fast-gt-a, `x > a` must be committed.
+
+  ∴ From FP-condition, `a.deps[1] == x` can NOT be committed on fast-path.
+
+  ∴ Discard `a.deps[1] == x`, try other value of `a.deps[1]`.
 
 Continue checking if `a.deps[1] == y` can be committed on fast-path, and so on.
 If no value of `a.deps[1]` could have been committed, use the initial value:
@@ -932,3 +944,31 @@ If `x` is committed,
 If `x` is not committed, wait until it is committed.
 
 Continue repeat these step on `a.deps[1] == y` to choose a value.
+
+## Recover algorithm
+
+Prepare for `a`
+
+retrieve instance `a` on every replicas in a classic-quorum,
+along with the dependent instance.
+:
+```
+from R0: a.deps = [x, y, z, ...]; x = (accepted, x.deps=...), y = ...
+from R1: a.deps = [u, v, w, ...]; w = (fast, u.deps=...), v = ...
+...
+```
+
+collect all values of `a.dpes[1]`: `[x, y, z]`
+
+sort them in top-down order,
+check if there is one that could have been fast-committed by `La`:
+for `x`, 
+- if `Lx` is in quorum, wait for Lx to commit x. TODO does not need to wait.
+- otherwise, choose `a.deps[1] == x` if: the value of x is NOT nil and `x < a`.
+
+If there is such an `x`, choose this `a.deps[1] = x`.
+Otherwise choose the first.
+
+Send Accept requests and commit.
+
+
