@@ -104,7 +104,6 @@ type Dep(InstanceID, bool)
 
 type Instance {
 
-    initial_deps:   Vec<Dep>;
     deps:          Vec<Dep>;
     final_deps:    Vec<Dep>;
     committed:     bool;
@@ -115,10 +114,10 @@ type Instance {
 }
 ```
 
-An instance has 4 attributes for `deps`:
+An instance has 2 attributes for `deps`:
 
-- `a.initial_deps`: is instance id set when `a` is created on leader.
-- `a.deps`: when `a` is created it is same as `a.initial_deps`.
+- `a.deps`: is instance id set when `a` is created on leader or
+    forwarded to other replica.
   when `a` is forwarded to other replica through FastAccept,
   it is updated instnce id set.
 
@@ -189,8 +188,9 @@ From definition, we infer that:
 
   > committed flag are ignored in this pseudo code for clarity
 
+  TODO only interfering instances
   ```
-  a.deps  = a.initial_deps = all_instances_on_this_repilca
+  a.deps  = all_instances_on_this_repilca
   ```
 
 - When a replica receives FastAccept of `a`,
@@ -199,6 +199,7 @@ From definition, we infer that:
 
   > committed flag are ignored in this pseudo code for clarity
 
+  TODO allow cycle deps?
   ```
   for x in all_instances_on_this_repilca:
       if not x > a:
@@ -345,10 +346,9 @@ On a replica,
 
 # Definition: attribute deps
 
-An instance has 4 attributes for `deps`:
+An instance has 2 attributes for `deps`:
 
-- `a.initial_deps`: is instance id set when `a` is created on leader.
-- `a.deps`: when `a` is created it is same as `a.initial_deps`.
+- `a.deps`: is instance id set when `a` is created on leader.
   when `a` is forwarded to other replica, it is updated instnce id set.
 
 - `a.final_deps` is `deps` updated by Accept or Commit.
@@ -501,14 +501,11 @@ Leader:
 
    build `a.deps`:
 
-   > committed flag are ignored in this pseudo code for clarity
-
    ```
    for x in all_instances_on_this_repilca:
        Lx = leaderOf(x)
        a.deps[Lx] = max(x, a.deps[Lx])
 
-   a.initial_deps = a.deps
    ```
 
 2. FastAccept: forward `a` to other replicas.
@@ -633,7 +630,7 @@ If `x` is fast-committed:
 ## FastAccept request
 
 - `cmds`: the commands to run.
-- `initial_deps`: the deps when leader initiate the instance.
+- `deps`: the deps when leader initiate the instance.
 
 ## FastAccept reply
 
@@ -938,8 +935,8 @@ Otherwise continue try checking `a.deps[1] == y`.
   ∴ Discard `a.deps[1] == x`, try other value of `a.deps[1]`.
 
 Continue checking if `a.deps[1] == y` can be committed on fast-path, and so on.
-If no value of `a.deps[1]` could have been committed, use the initial value:
-`a.initial_deps[1]`.
+If no value of `a.deps[1]` could have been committed, use the highest instnace
+id.
 
 ### Case-2: `R1` is unreachable, only one possibly committed value of `a.deps[1]`.
 
